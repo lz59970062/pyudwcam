@@ -3,7 +3,7 @@ import glob
 import pycalibmar as calibmar  
 
 
-image_list = glob.glob("pyudwcam/image3/*.jpg") 
+image_list = glob.glob("image4/*.jpg") 
 
 print(len(image_list)) 
 
@@ -57,31 +57,47 @@ for path in image_list:
     else:
         print(f"提取失败: {path} (Size: {pixmap.Width()}x{pixmap.Height()})")
 
-# --- 标定部分 (基础针孔模型 - 适用于空气中数据) ---
+# --- 标定部分 (平面折射模型) ---
 if len(calibration.Images()) > 0:
     print(f"\n开始标定，使用 {len(calibration.Images())} 张图像...")
     print(f"图像尺寸: {image_size}")
 
-    # 使用 BasicCalibrator 进行基础标定 (忽略外壳折射)
-    calibrator_options = calibmar.BasicCalibratorOptions()
+    calibrator_options = calibmar.HousingCalibratorOptions()
     
-    # 1. 设置相机模型
+    # 1. 设置相机模型 (这里使用 OpenCV 模型作为示例)
     calibrator_options.camera_model = calibmar.CameraModelType.OpenCVCameraModel
     calibrator_options.image_size = image_size
     
+    # 初始化相机参数 (fx, fy, cx, cy, k1, k2, p1, p2)
+    w, h = image_size
+    f = 1.2 * max(w, h) # 焦距粗略估计
+    print(f"Initial focal length estimate: {f}")
+    calibrator_options.camera_params = [f, f, w/2.0, h/2.0, 0.0, 0.0, 0.0, 0.0]
+    
+    # 2. 设置平面折射模型 (Flat Port)
+    calibrator_options.housing_interface = calibmar.HousingInterfaceType.DoubleLayerPlanarRefractive
+    
+    # 3. 设置初始外壳参数
+    # 格式: [Nx, Ny, Nz, distance, thickness, n_air, n_glass, n_water]
+    # Nx, Ny, Nz: 接口法向量 (通常初始化为光轴方向 0, 0, 1)
+    # distance: 玻璃内表面到相机中心的垂直距离 (米)
+    # thickness: 玻璃厚度 (米)
+    # n_*: 空气、玻璃、水的折射率
+    # --- 修正：针对水上（空气中）图像 ---
+    # 因为是在空气中拍摄，不存在折射。我们将所有折射率设为 1.0，模拟光线直线传播。
+    # 保持 distance > 0 以避免平面穿过相机光心导致的几何计算错误。
+    calibrator_options.initial_housing_params = [0.0, 0.0, 1.0, 0.05, 0.01, 1.0, 1.0, 1.0]
+    
+    # 4. 设置棋盘格信息 (用于初始化位姿)
+    calibrator_options.pattern_cols_rows = (extractor_options.chessboard_columns, extractor_options.chessboard_rows)
+    
     # 创建标定器并运行
-    calibrator = calibmar.BasicCalibrator(calibrator_options)
+    calibrator = calibmar.HousingCalibrator(calibrator_options)
     
     try:
         calibrator.Calibrate(calibration)
         print(f"\n标定成功!")
         print(f"RMS 误差: {calibration.CalibrationRms()}")
-        
-        camera = calibration.Camera()
-        print(f"标定后相机参数: {camera.params}")
-        
-    except Exception as e:
-        print(f"\n标定失败: {e}")
         print(f"标定后相机参数: {calibration.Camera().params}")
         print(f"标定后外壳参数: {calibration.Camera().refrac_params}")
         # 平面模型外壳参数: [Nx, Ny, Nz, dist, thick, na, ng, nw]

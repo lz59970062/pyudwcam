@@ -7,6 +7,7 @@
 #include "calibmar/core/image.h"
 #include "calibmar/core/pixmap.h"
 #include "calibmar/calibrators/housing_calibrator.h"
+#include "calibmar/calibrators/basic_calibrator.h"
 #include "calibmar/extractors/chessboard_extractor.h"
 #include "calibmar/core/camera_models.h"
 
@@ -107,6 +108,17 @@ PYBIND11_MODULE(pycalibmar, m) {
     py::class_<HousingCalibrator>(m, "HousingCalibrator")
         .def(py::init<const HousingCalibrator::Options&>())
         .def("Calibrate", &HousingCalibrator::Calibrate);
+
+    py::class_<BasicCalibrator::Options>(m, "BasicCalibratorOptions")
+        .def(py::init<>())
+        .def_readwrite("camera_model", &BasicCalibrator::Options::camera_model)
+        .def_readwrite("use_intrinsics_guess", &BasicCalibrator::Options::use_intrinsics_guess)
+        .def_readwrite("image_size", &BasicCalibrator::Options::image_size)
+        .def_readwrite("fast", &BasicCalibrator::Options::fast);
+
+    py::class_<BasicCalibrator>(m, "BasicCalibrator")
+        .def(py::init<const BasicCalibrator::Options&>())
+        .def("Calibrate", &BasicCalibrator::Calibrate);
 
     py::class_<ChessboardFeatureExtractor::Options>(m, "ChessboardFeatureExtractorOptions")
         .def(py::init<>())
