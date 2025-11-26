@@ -1,0 +1,10 @@
+LICENSE.txt
+README.md
+pyproject.toml
+setup.py
+pycalibmar.egg-info/PKG-INFO
+pycalibmar.egg-info/SOURCES.txt
+pycalibmar.egg-info/dependency_links.txt
+pycalibmar.egg-info/not-zip-safe
+pycalibmar.egg-info/requires.txt
+pycalibmar.egg-info/top_level.txt
